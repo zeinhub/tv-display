@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Music Player</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <h2>🎵 YouTube Music Player</h2>
+    
+    <input type="text" id="searchQuery" placeholder="Cari lagu di YouTube..." />
+    <button onclick="searchVideo()">🔍 Cari</button>
+    
+    <h3>🎥 Hasil Pencarian</h3>
+    <ul id="videoList"></ul>
+    
+    <h3>▶️ Pemutar Musik</h3>
+    <div id="player-container"></div>
+
+    <script>
+        const API_KEY = "AIzaSyANlIRzMYD-CGaHYPl5TIj0pm4Leq9enSE"; // API Key
+
+        function searchVideo() {
+            let query = $("#searchQuery").val();
+            if (!query) return alert("Masukkan kata kunci!");
+
+            $.get(`https://www.googleapis.com/youtube/v3/search`, {
+                part: "snippet",
+                q: query,
+                type: "video",
+                key: API_KEY
+            }).done(response => {
+                $("#videoList").empty();
+                response.items.forEach(video => {
+                    let videoId = video.id.videoId;
+                    let videoTitle = video.snippet.title;
+                    let embedUrl = `https://www.youtube.com/embed/${videoId}`;
+
+                    // Cek apakah bisa di-embed
+                    $.get(`https://www.googleapis.com/youtube/v3/videos`, {
+                        part: "status",
+                        id: videoId,
+                        key: API_KEY
+                    }).done(videoResponse => {
+                        let embeddable = videoResponse.items[0].status.embeddable;
+                        if (embeddable) {
+                            $("#videoList").append(`
+                                <li>
+                                    <a href="#" onclick="playVideo('${videoId}')">${videoTitle}</a>
+                                    <button onclick="copyToClipboard('${embedUrl}')">📋 Copy</button>
+                                </li>
+                            `);
+                        }
+                    });
+                });
+            }).fail(() => alert("Gagal mengambil data dari YouTube!"));
+        }
+
+        function playVideo(videoId) {
+            $("#player-container").html(`
+                <iframe id="player" width="560" height="315" src="https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            `);
+
+            let player;
+            function onYouTubeIframeAPIReady() {
+                player = new YT.Player("player", {
+                    events: {
+                        "onStateChange": function(event) {
+                            if (event.data === YT.PlayerState.ENDED) {
+                                alert("Lagu selesai diputar!");
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Load YouTube API jika belum ada
+            if (typeof YT === "undefined" || typeof YT.Player === "undefined") {
+                let tag = document.createElement("script");
+                tag.src = "https://www.youtube.com/iframe_api";
+                let firstScriptTag = document.getElementsByTagName("script")[0];
+                firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+            } else {
+                onYouTubeIframeAPIReady();
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Link berhasil disalin!");
+            });
+        }
+    </script>
+
+</body>
+</html>
