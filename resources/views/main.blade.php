@@ -237,6 +237,8 @@
 
     <script>
         const socket = io("127.0.0.1:3000");
+        var first_load = true;
+        var is_history = "Y";
         // const socket = io("wss://wsock.awiez.com");
 
         const form = document.getElementById("form");
@@ -260,14 +262,21 @@
                     $.each(res.data, function(index, item) {
                         // console.log(item.data);
 
-                        html += `
+                        if (is_history == "Y") {
+                            html = `
+                            <li>Belum ada request, lagu akan diputar secara acak.</li>
+                            `;
+                        }else{
+                            html += `
                             <li>${item.song_title}</li>
-                        `;
+                        `;  
+                        }
+                        
                     })
                     $('#nextSong').html(html);
 
                     if (callback) callback(res);
-                    // console.log(res);
+                    console.log(res);
                 },
                 error: function(err) {
                     console.log(err);
@@ -276,7 +285,8 @@
         }
 
         $(document).ready(function() {
-            // playSong();            
+            getSong();
+            playSong();            
         })
 
         socket.on("tv-display", (msg) => {
@@ -321,11 +331,18 @@
                 console.log("aaass", convertToEmbed(player.getVideoUrl()) + "?autoplay=1&enablejsapi=1");
 
 
-                if (convertToEmbed(player.getVideoUrl()) + "?autoplay=1&enablejsapi=1" !=
-                    "https://www.youtube.com/embed/72kUZ1LaI7U?autoplay=1&enablejsapi=1" && next ==
-                    false) {
-                    return;
+                if (is_history == "N" && next == false) {
+                    if (first_load == false) {
+                        return;
+                    }
+
+                    first_load = false;
                 }
+                // if (convertToEmbed(player.getVideoUrl()) + "?autoplay=1&enablejsapi=1" !=
+                //     "https://www.youtube.com/embed/72kUZ1LaI7U?autoplay=1&enablejsapi=1" && next ==
+                //     false) {
+                //     return;
+                // }
 
                 if (next == true) {
                     $('#nextBy').html("Lagu di skip oleh: " + name);
@@ -349,6 +366,7 @@
                     res.data[0].message != null ? $('#message').html("Pesan: " + res.data[0].message) : $(
                         '#message').html("");
                     msg = res.data[0].song_url
+                    is_history = res.is_history
                     updateSong(res.data[0].id);
                 } else {
                     console.log("n");
