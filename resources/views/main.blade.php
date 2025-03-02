@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Laravel</title>
+    <title>Warung Nasi Zein Pemalang</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -47,13 +47,14 @@
             </div>
         </div> --}}
         <div class="row">
-            <div class="col-8 my-auto">
+            <div class="col-8">
                 <div class="splide splide_info" role="group" aria-label="Splide Basic HTML Example">
                     <div class="splide__track">
                         <ul class="splide__list">
                             @foreach ($banners as $item)
                                 <li class="splide__slide" data-splide-interval="10000">
-                                    <img class="banner" src="{{ asset('img/' . $item->filename) }}" alt="">
+                                    <img style="max-width: 80%" class="banner"
+                                        src="{{ asset('img/' . $item->filename) }}" alt="">
                                 </li>
                             @endforeach
                         </ul>
@@ -62,6 +63,32 @@
                         <div class="splide__progress__bar p-1">
                         </div>
                     </div> --}}
+                </div>
+                <br> <br>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="text-left">
+                            <div class="d-flex"><h3 id="jadwalSholatTitle"></h3> <h3 id="maghrib" class="d-none"> &nbsp; | Waktu Maghrib Telah Tiba, Selamat Berbuka Puasa!</h3></div>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="jadwalSholat" class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Imsak</th>
+                                        <th>Subuh</th>
+                                        <th>Dhuha</th>
+                                        <th>Dzuhur</th>
+                                        <th>Ashar</th>
+                                        <th>Maghrib</th>
+                                        <th>Isya</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="col-4">
@@ -129,6 +156,10 @@
     <script>
         function updateClock() {
             var d = new Date();
+            let jamSekarang = d.getHours().toString().padStart(2, '0');
+            let menitSekarang = d.getMinutes().toString().padStart(2, '0');
+            let waktuSekarang = `${jamSekarang}:${menitSekarang}`; // Format "HH:mm"
+            let maghrib;
 
             // Ambil jam, menit, dan detik dengan format dua digit
             var hours = String(d.getHours()).padStart(2, '0');
@@ -143,6 +174,14 @@
             // Gabungkan format waktu dan tanggal
             let now = hours + ":" + minutes + ":" + seconds;
             let date = day + "/" + month + "/" + year;
+
+            if (waktuSekarang === maghrib) {
+                console.log(waktuSekarang);
+                console.log(maghrib);
+                $('#maghrib').removeClass('d-none').addClass('d-block');
+            }else{
+                $('#maghrib').removeClass('d-block').addClass('d-none');
+            }
 
 
             document.getElementById('time').innerText = now;
@@ -236,7 +275,7 @@
     </script>
 
     <script>
-        const socket = io("127.0.0.1:3000");
+        const socket = io("{{ env('SOCKET_IO_URL') }}");
         var first_load = true;
         var is_history = "Y";
         // const socket = io("wss://wsock.awiez.com");
@@ -266,12 +305,12 @@
                             html = `
                             <li>Belum ada request, lagu akan diputar secara acak.</li>
                             `;
-                        }else{
+                        } else {
                             html += `
                             <li>${item.song_title}</li>
-                        `;  
+                        `;
                         }
-                        
+
                     })
                     $('#nextSong').html(html);
 
@@ -286,7 +325,7 @@
 
         $(document).ready(function() {
             getSong();
-            playSong();            
+            playSong();
         })
 
         socket.on("tv-display", (msg) => {
@@ -416,6 +455,66 @@
             const match = url.match(/(?:youtube\.com\/(?:.*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([^?&]+)/i);
             return match ? match[1] : null;
         }
+
+        function formatTanggal(dateString) {
+            let date = new Date(dateString);
+            let options = {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            };
+
+            return date.toLocaleDateString('id-ID', options);
+        }
+
+        function getJadwalSholat() {
+            $(document).ready(function() {
+                let today = new Date();
+                let year = today.getFullYear();
+                let month = String(today.getMonth() + 1).padStart(2, '0'); // Bulan dalam format 2 digit
+                let date = String(today.getDate()).padStart(2, '0'); // Tanggal dalam format 2 digit
+
+                let apiUrl = `https://api.myquran.com/v2/sholat/jadwal/1107/${year}/${month}`;
+
+                $.ajax({
+                    url: apiUrl,
+                    method: "GET",
+                    success: function(response) {
+                        if (response.status) {
+                            let todayDate = `${year}-${month}-${date}`; // Format YYYY-MM-DD
+                            let jadwalHariIni = response.data.jadwal.find(j => j.date === todayDate);
+
+                            if (jadwalHariIni) {
+                                maghrib = jadwalHariIni.maghrib;
+                                $('#jadwalSholatTitle').html(formatTanggal(jadwalHariIni.date))
+                                console.log("Jadwal Sholat Hari Ini:", jadwalHariIni);
+                                let html = `
+                                    <tr>
+                                        <td>${jadwalHariIni.imsak}</td>
+                                        <td>${jadwalHariIni.subuh}</td>
+                                        <td>${jadwalHariIni.dhuha}</td>
+                                        <td>${jadwalHariIni.dzuhur}</td>
+                                        <td>${jadwalHariIni.ashar}</td>
+                                        <td>${jadwalHariIni.maghrib}</td>
+                                        <td>${jadwalHariIni.isya}</td>
+                                    </tr>
+                                `;
+
+                                $('#jadwalSholat tbody').html(html);
+                            } else {
+                                console.log("Jadwal tidak ditemukan untuk tanggal hari ini.");
+                            }
+                        }
+                    },
+                    error: function() {
+                        console.log("Gagal mengambil data dari API");
+                    }
+                });
+            });
+        }
+
+        getJadwalSholat();
     </script>
 </body>
 
