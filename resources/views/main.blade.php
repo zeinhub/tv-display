@@ -292,9 +292,17 @@
         //      }
         //    });
 
+        function secureUrl(url)
+        {
+            var getSongUrl = url;
+            var secureUrl = getSongUrl.replace("http://", "https://");
+
+            return secureUrl;
+        }
+
         function getSong(callback) {
             $.ajax({
-                url: "{{ route('song.queue') }}",
+                url: secureUrl("{{ route('song.queue') }}"),
                 method: 'GET',
                 success: function(res) {
                     let html = "";
@@ -338,7 +346,7 @@
 
         function updateSong(id) {
             $.ajax({
-                url: "{{ route('song.queue.update') }}",
+                url: secureUrl("{{ route('song.queue.update') }}"),
                 method: 'POST',
                 data: {
                     id: id,
